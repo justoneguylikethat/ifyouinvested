@@ -2,7 +2,7 @@ import Groq from "groq-sdk";
 import { InvestmentResult } from "../types";
 
 const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY,
+    apiKey: process.env.GROQ_API_KEY || "dummy_key_for_build",
 });
 
 export async function generateAIInsights(results: InvestmentResult[]) {

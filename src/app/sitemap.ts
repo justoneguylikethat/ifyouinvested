@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 import { POPULAR_ASSETS } from '@/lib/assets';
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://invested.today';
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ifyouinvested.online';
 
 // Generate sitemap permutations for all 100+ top assets
 const assetSymbols = POPULAR_ASSETS.map(a => a.symbol.toLowerCase());

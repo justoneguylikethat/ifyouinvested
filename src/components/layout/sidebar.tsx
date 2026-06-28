@@ -73,8 +73,14 @@ const navGroups = [
   }
 ];
 
-export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, setMobileOpen: (open: boolean) => void }) {
-  const [collapsed, setCollapsed] = useState(false);
+interface SidebarProps {
+  mobileOpen: boolean;
+  setMobileOpen: (open: boolean) => void;
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+}
+
+export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
 
   const toggleCollapsed = () => setCollapsed(!collapsed);

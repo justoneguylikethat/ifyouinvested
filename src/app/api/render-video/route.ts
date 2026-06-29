@@ -5,6 +5,11 @@ import os from 'os';
 import { bundle } from '@remotion/bundler';
 import { renderMedia, selectComposition } from '@remotion/renderer';
 import { enqueueRender } from '@/lib/render-queue';
+import { 
+  renderVideoOnLambda, 
+  getRenderProgress, 
+  speculateFunctionName 
+} from '@remotion/lambda/client';
 
 export const maxDuration = 300; // Allow long-running renders
 
@@ -44,14 +49,72 @@ export async function POST(req: Request) {
   const forwarded = req.headers.get('x-forwarded-for');
   const clientIp = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
 
+  const isAwsConfigured = !!(
+    (process.env.REMOTION_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID) && 
+    (process.env.REMOTION_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY) &&
+    process.env.REMOTION_AWS_SERVE_URL
+  );
+
   const result = await enqueueRender(clientIp, async () => {
     const props = await req.json();
-    const sessionId = Math.random().toString(36).substring(7);
-    const outPath = path.join(os.tmpdir(), `out-${sessionId}.mp4`);
-
     const compositionId = props.templateId ? 'StudioVideo' : 'SimulationVideo';
     console.log(`[render] Rendering composition: ${compositionId} for IP: ${clientIp}`);
 
+    if (isAwsConfigured) {
+      console.log('[render] Running render on AWS Lambda...');
+      const region = (process.env.REMOTION_AWS_REGION || 'us-east-1') as any;
+      const functionName = speculateFunctionName({
+        remotionVersion: '4.0.484',
+      });
+
+      // 1. Trigger the render on Lambda
+      const { renderId, bucketName } = await renderVideoOnLambda({
+        region,
+        functionName,
+        composition: compositionId,
+        inputProps: props,
+        codec: 'h264',
+        serveUrl: process.env.REMOTION_AWS_SERVE_URL!,
+      });
+
+      // 2. Poll for progress until complete
+      let progress = await getRenderProgress({
+        region,
+        bucketName,
+        renderId,
+      });
+
+      while (!progress.done && !progress.fatalErrorEncountered) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        progress = await getRenderProgress({
+          region,
+          bucketName,
+          renderId,
+        });
+      }
+
+      if (progress.fatalErrorEncountered) {
+        throw new Error(`Lambda render failed: ${progress.errors[0]?.message || 'Unknown error'}`);
+      }
+
+      if (!progress.outputUrl) {
+        throw new Error('Lambda render complete but no outputUrl returned.');
+      }
+
+      console.log(`[render] AWS Lambda render complete! Output: ${progress.outputUrl}`);
+
+      // 3. Fetch finished video and return buffer
+      const videoRes = await fetch(progress.outputUrl);
+      if (!videoRes.ok) {
+        throw new Error(`Failed to fetch rendered video from S3: ${videoRes.statusText}`);
+      }
+      const arrayBuffer = await videoRes.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    }
+
+    // -- LOCAL RUNTIME RENDER FALLBACK --
+    const sessionId = Math.random().toString(36).substring(7);
+    const outPath = path.join(os.tmpdir(), `out-${sessionId}.mp4`);
     const serveUrl = await getBundleUrl();
 
     const composition = await selectComposition({
@@ -85,7 +148,7 @@ export async function POST(req: Request) {
     const videoBuffer = await fs.readFile(outPath);
     await fs.unlink(outPath).catch(console.error);
     return videoBuffer;
-  });
+  }, isAwsConfigured);
 
   if (!result.ok) {
     return NextResponse.json(

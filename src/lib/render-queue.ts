@@ -38,7 +38,8 @@ export type QueueResult<T> =
  */
 export async function enqueueRender<T>(
   clientIp: string,
-  work: () => Promise<T>
+  work: () => Promise<T>,
+  bypassQueue: boolean = false
 ): Promise<QueueResult<T>> {
   // 1. Per-IP rate limit
   const lastRender = ipLastRender.get(clientIp);
@@ -55,7 +56,7 @@ export async function enqueueRender<T>(
   }
 
   // 2. Queue depth check
-  if (activeRenders >= MAX_CONCURRENT && queuedRenders >= MAX_QUEUE_DEPTH) {
+  if (!bypassQueue && activeRenders >= MAX_CONCURRENT && queuedRenders >= MAX_QUEUE_DEPTH) {
     return {
       ok: false,
       status: 503,
@@ -67,7 +68,7 @@ export async function enqueueRender<T>(
   ipLastRender.set(clientIp, Date.now());
 
   // 4. Wait for a slot if at concurrency limit
-  if (activeRenders >= MAX_CONCURRENT) {
+  if (!bypassQueue && activeRenders >= MAX_CONCURRENT) {
     queuedRenders++;
     await waitForSlot();
     queuedRenders--;
@@ -82,7 +83,9 @@ export async function enqueueRender<T>(
     throw err;
   } finally {
     activeRenders--;
-    notifyWaiters();
+    if (!bypassQueue) {
+      notifyWaiters();
+    }
   }
 }
 

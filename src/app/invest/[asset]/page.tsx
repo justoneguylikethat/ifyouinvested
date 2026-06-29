@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description,
     image: `/api/og?title=${encodeURIComponent(title)}`,
     alternates: {
-      canonical: `https://invested.today/invest/${asset.symbol.toLowerCase()}`,
+      canonical: `/invest/${asset.symbol.toLowerCase()}`,
     }
   });
 }
@@ -37,8 +37,8 @@ export default function AssetIndexPage({ params }: PageProps) {
     "description": `Historical return and ROI simulator for ${asset.name} (${asset.symbol}).`,
     "provider": {
       "@type": "Organization",
-      "name": "Invested-Now",
-      "url": "https://invested.today"
+      "name": "IfYouInvested",
+      "url": "https://ifyouinvested.online"
     }
   };
 

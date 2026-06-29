@@ -1,9 +1,9 @@
 import { Metadata } from 'next';
 
-const defaultUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://invested.today';
+const defaultUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ifyouinvested.online';
 
 export function constructMetadata({
-  title = 'Invested Now | Time Travel With Your Money',
+  title = 'IfYouInvested.online | Time Travel With Your Money',
   description = 'Simulate historical returns across stocks and crypto. See what you missed out on, or what bullets you dodged.',
   image = '/api/og',
   noIndex = false,
@@ -31,7 +31,7 @@ export function constructMetadata({
       title,
       description,
       images: [image.startsWith('http') ? image : `${defaultUrl}${image}`],
-      creator: '@investedtoday',
+      creator: '@ifyouinvested',
     },
     metadataBase: new URL(defaultUrl),
     ...(noIndex && {

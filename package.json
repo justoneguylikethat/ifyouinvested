@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
-    "build": "next build",
+    "prebundle": "node scripts/prebundle-remotion.mjs",
+    "build": "node scripts/prebundle-remotion.mjs && next build",
     "start": "next start",
     "lint": "next lint"
   },

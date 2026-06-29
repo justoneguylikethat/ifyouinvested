@@ -34,3 +34,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Remotion pre-built bundle (rebuilt at Docker build time via `npm run build`)
+/public/remotion-bundle/

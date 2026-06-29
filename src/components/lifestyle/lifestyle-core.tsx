@@ -236,7 +236,7 @@ export function LifestyleCore() {
               </div>
             </div>
 
-            <VideoExportView results={results.videoData} />
+            <VideoExportView results={results.videoData} mode="lifestyle" />
           </div>
         )}
       </div>

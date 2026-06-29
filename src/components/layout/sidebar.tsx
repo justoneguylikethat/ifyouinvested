@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -27,9 +27,11 @@ import {
   ChevronRight,
   Menu,
   Gamepad2,
-  X
+  X,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const navGroups = [
   {
@@ -82,8 +84,54 @@ interface SidebarProps {
 
 export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   const toggleCollapsed = () => setCollapsed(!collapsed);
+
+  useEffect(() => {
+    // 1. Check if PWA is installable (Chrome / Android / Desktop)
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // 2. Check if iOS
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+    
+    setIsIOS(isIOSDevice);
+    setIsStandalone(isStandaloneMode);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (isInstallable && deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstallable(false);
+        setDeferredPrompt(null);
+      }
+    } else if (isIOS) {
+      toast("To install on iOS:", {
+        description: "Tap the 'Share' icon in Safari and select 'Add to Home Screen' from the menu.",
+        duration: 8000,
+        action: {
+          label: "Got it",
+          onClick: () => {}
+        }
+      });
+    }
+  };
 
   return (
     <>
@@ -160,6 +208,23 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }: 
             </div>
           ))}
         </div>
+
+        {/* PWA Install Button */}
+        {(isInstallable || (isIOS && !isStandalone)) && (
+          <div className="px-4 py-2 border-t border-white/5">
+            <button
+              onClick={handleInstall}
+              className={cn(
+                "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all font-bold text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/10",
+                collapsed && "justify-center px-0"
+              )}
+              title={collapsed ? "Install App" : undefined}
+            >
+              <Download className="w-5 h-5 shrink-0" />
+              {!collapsed && <span>Install App</span>}
+            </button>
+          </div>
+        )}
 
         <div className="p-4 border-t border-white/10">
           <Button 

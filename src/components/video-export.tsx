@@ -46,10 +46,50 @@ function convertResultsToRaceDataset(results: InvestmentResult[]) {
   };
 }
 
-export function VideoExportView({ results }: { results: InvestmentResult[] }) {
+function convertResultsToLifestyleDataset(results: InvestmentResult[]) {
+  if (!results || results.length === 0) return null;
+  const res = results[0];
+  
+  const timeline = res.history.map(pt => pt.date.split("-")[0]);
+  const uniqueYears = Array.from(new Set(timeline));
+  
+  const spentValues = uniqueYears.map((_, idx) => {
+    return (res.initialInvestment / Math.max(1, uniqueYears.length - 1)) * idx;
+  });
+  
+  const investedValues = uniqueYears.map(year => {
+    const ptsInYear = res.history.filter(pt => pt.date.startsWith(year));
+    if (ptsInYear.length > 0) {
+      return ptsInYear[ptsInYear.length - 1].price;
+    }
+    return res.finalValue;
+  });
+
+  return {
+    title: 'Daily Habits vs Investing',
+    subtitle: res.asset.name,
+    series: [
+      {
+        name: 'Total Spent on Habit',
+        color: '#ef4444',
+        values: spentValues
+      },
+      {
+        name: 'Portfolio Value (Invested)',
+        color: '#10b981',
+        values: investedValues
+      }
+    ],
+    timeline: uniqueYears,
+    unit: ''
+  };
+}
+
+
+export function VideoExportView({ results, mode = 'investment' }: { results: InvestmentResult[]; mode?: 'investment' | 'lifestyle' }) {
   const [layout, setLayout] = useState<VideoLayout>('vertical');
   const [theme, setTheme] = useState<VideoTheme>('dark');
-  const [videoStyle, setVideoStyle] = useState<'chart' | 'race'>('chart');
+  const [videoStyle, setVideoStyle] = useState<'chart' | 'race' | 'lifestyle'>(mode === 'lifestyle' ? 'lifestyle' : 'chart');
   const [isRendering, setIsRendering] = useState(false);
 
   if (!results || results.length === 0) return null;
@@ -57,6 +97,8 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
   // Determine duration based on style
   const durationInFrames = videoStyle === 'race' 
     ? 900 // 30s default for leaderboard race
+    : videoStyle === 'lifestyle'
+    ? 300 // 10s default for lifestyle compare
     : (results.length > 1 ? 600 + (results.length * 90) : 600); // legacy formula for line chart
   const fps = 30;
 
@@ -80,30 +122,60 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
     try {
       setIsRendering(true);
 
-      const payload = videoStyle === 'race' ? {
-        templateId: 'leaderboard-race',
-        dataset: convertResultsToRaceDataset(results),
-        layout,
-        theme,
-        branding: {
-          logoUrl: '',
-          watermark: 'ifyouinvested.online',
-          outroText: 'Subscribe for daily content!',
-          socialHandle: '@investednow',
-          websiteUrl: 'ifyouinvested.online'
-        },
-        music: 'modern',
-        voiceover: {
-          enabled: false,
-          gender: 'male',
-          accent: 'US',
-          autoScript: true,
-          scriptText: ''
-        },
-        animationStyle: 'standard',
-        title: 'WHICH INVESTMENT MADE YOU RICHER?',
-        durationInFrames
-      } : { results, layout, theme };
+      let payload;
+      if (videoStyle === 'race') {
+        payload = {
+          templateId: 'leaderboard-race',
+          dataset: convertResultsToRaceDataset(results),
+          layout,
+          theme,
+          branding: {
+            logoUrl: '',
+            watermark: 'ifyouinvested.online',
+            outroText: 'Subscribe for daily content!',
+            socialHandle: '@investednow',
+            websiteUrl: 'ifyouinvested.online'
+          },
+          music: 'modern',
+          voiceover: {
+            enabled: false,
+            gender: 'male',
+            accent: 'US',
+            autoScript: true,
+            scriptText: ''
+          },
+          animationStyle: 'standard',
+          title: 'WHICH INVESTMENT MADE YOU RICHER?',
+          durationInFrames
+        };
+      } else if (videoStyle === 'lifestyle') {
+        payload = {
+          templateId: 'lifestyle-spending',
+          dataset: convertResultsToLifestyleDataset(results),
+          layout,
+          theme,
+          branding: {
+            logoUrl: '',
+            watermark: 'ifyouinvested.online',
+            outroText: 'Subscribe for daily content!',
+            socialHandle: '@investednow',
+            websiteUrl: 'ifyouinvested.online'
+          },
+          music: 'modern',
+          voiceover: {
+            enabled: false,
+            gender: 'male',
+            accent: 'US',
+            autoScript: true,
+            scriptText: ''
+          },
+          animationStyle: 'standard',
+          title: 'DAILY HABITS VS INVESTING',
+          durationInFrames
+        };
+      } else {
+        payload = { results, layout, theme };
+      }
 
       const res = await fetch('/api/render-video', {
         method: 'POST',
@@ -160,6 +232,16 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
         
         {/* Style Selection */}
         <div className="flex items-center gap-2 bg-black/40 p-1.5 border border-white/10 rounded-xl">
+          {mode === 'lifestyle' && (
+            <button
+              onClick={() => setVideoStyle('lifestyle')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                videoStyle === 'lifestyle' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              Lifestyle Compare
+            </button>
+          )}
           <button
             onClick={() => setVideoStyle('chart')}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
@@ -282,6 +364,45 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
                 },
                 animationStyle: 'standard',
                 title: 'WHICH INVESTMENT MADE YOU RICHER?',
+                durationInFrames
+              }}
+              durationInFrames={durationInFrames}
+              compositionWidth={pProps.compWidth}
+              compositionHeight={pProps.compHeight}
+              fps={fps}
+              controls
+              acknowledgeRemotionLicense
+              style={{
+                width: '100%',
+                height: 'auto',
+                aspectRatio: `${pProps.compWidth} / ${pProps.compHeight}`,
+              }}
+            />
+          ) : videoStyle === 'lifestyle' ? (
+            <Player
+              component={StudioVideoComposition}
+              inputProps={{
+                templateId: 'lifestyle-spending',
+                dataset: convertResultsToLifestyleDataset(results),
+                layout,
+                theme,
+                branding: {
+                  logoUrl: '',
+                  watermark: 'ifyouinvested.online',
+                  outroText: 'Subscribe for daily content!',
+                  socialHandle: '@investednow',
+                  websiteUrl: 'ifyouinvested.online'
+                },
+                music: 'modern',
+                voiceover: {
+                  enabled: false,
+                  gender: 'male',
+                  accent: 'US',
+                  autoScript: true,
+                  scriptText: ''
+                },
+                animationStyle: 'standard',
+                title: 'DAILY HABITS VS INVESTING',
                 durationInFrames
               }}
               durationInFrames={durationInFrames}

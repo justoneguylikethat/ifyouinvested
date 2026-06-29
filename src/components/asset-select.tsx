@@ -33,6 +33,13 @@ interface AssetSelectProps {
 export function AssetSelect({ value, onValueChange, className }: AssetSelectProps) {
   const [open, setOpen] = React.useState(false)
 
+  React.useEffect(() => {
+    if (open) {
+      // Warm up the Cloud Run container by pinging the render endpoint
+      fetch('/api/render-video').catch(() => {});
+    }
+  }, [open])
+
   const selectedAsset = POPULAR_ASSETS.find((asset) => asset.symbol === value)
 
   return (

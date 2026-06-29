@@ -3,6 +3,7 @@ import { POPULAR_ASSETS } from '@/lib/assets';
 import { constructMetadata } from '@/lib/seo';
 import { Simulator } from '@/components/simulator';
 import { calculateInvestment } from '@/lib/calculator';
+import { JsonLd } from '@/components/json-ld';
 
 interface PageProps {
   params: {
@@ -51,12 +52,14 @@ export default async function SimulationPage({ params }: PageProps) {
 
   let initialResults = undefined;
   let seoText = null;
+  let calculationResult: any = null;
 
   try {
     const startDate = `${params.year}-01-01`;
     const endDate = new Date().toISOString().split('T')[0];
     const result = await calculateInvestment(asset, Number(params.amount), startDate, endDate);
     initialResults = [result];
+    calculationResult = result;
     
     const finalValueFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(result.finalValue);
     const roiFormatted = result.percentageReturn.toFixed(2);
@@ -76,8 +79,67 @@ export default async function SimulationPage({ params }: PageProps) {
     console.error('Page calc error:', error);
   }
 
+  // Generate Schemas for Google Rich Snippets
+  const financialProductSchema = {
+    "@context": "https://schema.org",
+    "@type": "FinancialProduct",
+    "name": `Investment Simulation: ${formattedAmount} in ${asset.name} (${params.year})`,
+    "description": `Calculate the return of a ${formattedAmount} investment in ${asset.name} (${asset.symbol}) since ${params.year}.`,
+    "provider": {
+      "@type": "Organization",
+      "name": "IfYouInvested",
+      "url": "https://ifyouinvested.online"
+    },
+    "annualPercentageRate": calculationResult ? Number(calculationResult.cagr.toFixed(2)) : undefined
+  };
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": `How much would ${formattedAmount} invested in ${asset.name} in ${params.year} be worth today?`,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": calculationResult 
+            ? `An investment of ${formattedAmount} in ${asset.name} (${asset.symbol}) in ${params.year} would be worth $${calculationResult.finalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })} today, yielding a total return of ${calculationResult.percentageReturn.toFixed(0)}% (CAGR of ${calculationResult.cagr.toFixed(2)}%).`
+            : `You can calculate the exact returns for ${asset.name} using our simulator.`
+        }
+      }
+    ]
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://ifyouinvested.online"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": `Invest in ${asset.symbol}`,
+        "item": `https://ifyouinvested.online/invest/${asset.symbol.toLowerCase()}`
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": `${formattedAmount} in ${params.year}`,
+        "item": `https://ifyouinvested.online/invest/${asset.symbol.toLowerCase()}/${params.amount}/${params.year}`
+      }
+    ]
+  };
+
   return (
     <>
+      <JsonLd data={financialProductSchema} />
+      <JsonLd data={faqSchema} />
+      <JsonLd data={breadcrumbSchema} />
       {seoText}
       <Simulator 
         title={`What if you invested ${formattedAmount} in ${asset.name}?`}

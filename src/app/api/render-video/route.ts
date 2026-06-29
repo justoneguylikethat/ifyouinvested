@@ -65,6 +65,9 @@ export async function POST(req: Request) {
       const region = (process.env.REMOTION_AWS_REGION || 'us-east-1') as any;
       const functionName = speculateFunctionName({
         remotionVersion: '4.0.484',
+        memorySizeInMb: 2048,
+        diskSizeInMb: 2048,
+        timeoutInSeconds: 120,
       });
 
       // 1. Trigger the render on Lambda

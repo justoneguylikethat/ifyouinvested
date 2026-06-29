@@ -55,3 +55,17 @@ spec:
                 secretKeyRef:
                   name: POLYGON_API_KEY
                   key: latest
+            - name: REMOTION_AWS_REGION
+              value: us-east-2
+            - name: REMOTION_AWS_SERVE_URL
+              value: https://remotionlambda-useast2-uevgmoavwb.s3.us-east-2.amazonaws.com/sites/4ny83noeq6/index.html
+            - name: REMOTION_AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: REMOTION_AWS_ACCESS_KEY_ID
+                  key: latest
+            - name: REMOTION_AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: REMOTION_AWS_SECRET_ACCESS_KEY
+                  key: latest

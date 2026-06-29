@@ -138,7 +138,7 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
     <div className="w-full bg-white/5 border border-white/10 rounded-3xl p-4 md:p-8 shadow-2xl overflow-hidden relative">
       <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
       
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
+      <div className="flex flex-col md:flex-row flex-wrap justify-between items-start md:items-center mb-8 gap-6">
         <div>
           <h3 className="text-2xl font-bold text-white tracking-tight mb-2">Export Animation</h3>
           <p className="text-slate-400 font-medium text-sm">Download a video to share on social media.</p>
@@ -164,7 +164,7 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
           </button>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto flex-1 md:justify-end">
           <div className="flex items-center gap-2 bg-black/40 p-1.5 border border-white/10 rounded-xl overflow-x-auto w-full md:w-auto shrink-0">
             <button
               onClick={() => setLayout('vertical')}

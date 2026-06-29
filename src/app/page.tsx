@@ -15,8 +15,8 @@ export default function Home() {
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white mb-2">
           Dashboard
         </h1>
-        <p className="text-slate-400">
-          Welcome back. Here is the overview of your simulated portfolios.
+        <p className="text-slate-400 max-w-3xl leading-relaxed">
+          Welcome to IfYouInvested. Use our suite of tools to simulate historical returns, test investment strategies like Dollar-Cost Averaging, and discover how past decisions could have performed across stocks and crypto.
         </p>
       </div>
       

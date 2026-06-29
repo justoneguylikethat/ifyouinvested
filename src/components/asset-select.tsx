@@ -18,6 +18,12 @@ import {
 } from "@/components/ui/popover"
 import { POPULAR_ASSETS } from "@/lib/assets"
 
+const TOP_SYMBOLS = ['AAPL', 'MSFT', 'BTC', 'ETH', 'DOGE', 'SHIB', 'SPY', 'QQQ'];
+const MIXED_ASSETS = [
+  ...POPULAR_ASSETS.filter(a => TOP_SYMBOLS.includes(a.symbol)),
+  ...POPULAR_ASSETS.filter(a => !TOP_SYMBOLS.includes(a.symbol))
+];
+
 interface AssetSelectProps {
   value: string;
   onValueChange: (symbol: string) => void;
@@ -45,14 +51,16 @@ export function AssetSelect({ value, onValueChange, className }: AssetSelectProp
       <PopoverContent 
         className="p-0 border-white/10 bg-[#0B1220] text-white" 
         align="start"
+        side="bottom"
+        avoidCollisions={false}
         style={{ width: 'var(--radix-popover-trigger-width)' }}
       >
         <Command className="bg-transparent border-none">
-          <CommandInput placeholder="Search symbol or name..." className="text-white border-b border-white/10" />
+          <CommandInput placeholder="Search symbol or name..." className="text-white border-b border-white/10 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none" />
           <CommandList className="max-h-[300px] overflow-y-auto custom-scrollbar">
             <CommandEmpty className="py-6 text-center text-sm text-slate-400">No asset found.</CommandEmpty>
             <CommandGroup>
-              {POPULAR_ASSETS.map((asset) => (
+              {MIXED_ASSETS.map((asset) => (
                 <CommandItem
                   key={asset.symbol}
                   value={`${asset.symbol} ${asset.name}`}

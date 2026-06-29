@@ -3,20 +3,61 @@
 import { useState } from "react";
 import { Player } from "@remotion/player";
 import { VideoComposition, VideoLayout, VideoTheme } from "../remotion/Composition";
+import { StudioVideoComposition } from "../remotion/StudioComposition";
 import { InvestmentResult } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Download, Monitor, Smartphone, Square, Loader2, Moon, Sun } from "lucide-react";
+import { Download, Monitor, Smartphone, Square, Loader2, Moon, Sun, Play } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+
+function convertResultsToRaceDataset(results: InvestmentResult[]) {
+  if (!results || results.length === 0) return null;
+  
+  const timeline = results[0].history.map(pt => pt.date.split("-")[0]);
+  const startYear = results[0].startDate.split("-")[0];
+  const initialAmount = results[0].initialInvestment;
+  
+  const series = results.map(res => {
+    let color = '#3b82f6';
+    const symbol = res.asset.symbol.toUpperCase();
+    if (symbol.includes('BTC') || symbol.includes('BITCOIN')) color = '#F7931A';
+    else if (symbol.includes('TSLA') || symbol.includes('TESLA')) color = '#E82127';
+    else if (symbol.includes('NVDA') || symbol.includes('NVIDIA')) color = '#76B900';
+    else if (symbol.includes('AAPL') || symbol.includes('APPLE')) color = '#A2AAAD';
+    else if (symbol.includes('AMZN') || symbol.includes('AMAZON')) color = '#FF9900';
+    else if (symbol.includes('GLD') || symbol.includes('GOLD')) color = '#D4AF37';
+    else if (symbol.includes('SPY') || symbol.includes('S&P') || symbol.includes('VOO')) color = '#0056b3';
+    
+    const values = res.history.map(pt => res.sharesPurchased * pt.price);
+    
+    return {
+      name: res.asset.name,
+      color,
+      values
+    };
+  });
+
+  return {
+    title: 'WHICH INVESTMENT MADE YOU RICHER?',
+    subtitle: `$${initialAmount.toLocaleString()} invested in ${startYear}`,
+    series,
+    timeline,
+    unit: ''
+  };
+}
 
 export function VideoExportView({ results }: { results: InvestmentResult[] }) {
   const [layout, setLayout] = useState<VideoLayout>('vertical');
   const [theme, setTheme] = useState<VideoTheme>('dark');
+  const [videoStyle, setVideoStyle] = useState<'chart' | 'race'>('chart');
   const [isRendering, setIsRendering] = useState(false);
 
   if (!results || results.length === 0) return null;
 
-  const durationInFrames = results.length > 1 ? 600 + (results.length * 90) : 600; // 20s base + 3s per asset if multiple
+  // Determine duration based on style
+  const durationInFrames = videoStyle === 'race' 
+    ? 900 // 30s default for leaderboard race
+    : (results.length > 1 ? 600 + (results.length * 90) : 600); // legacy formula for line chart
   const fps = 30;
 
   // Determine Player dimensions based on layout
@@ -35,15 +76,41 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
   const pProps = getPlayerProps();
 
   const handleRender = async () => {
-    const toastId = toast.loading("Rendering your video... This might take a minute.");
+    const toastId = toast.loading("Synthesizing rendering layers... This might take a minute.");
     try {
       setIsRendering(true);
+
+      const payload = videoStyle === 'race' ? {
+        templateId: 'leaderboard-race',
+        dataset: convertResultsToRaceDataset(results),
+        layout,
+        theme,
+        branding: {
+          logoUrl: '',
+          watermark: 'ifyouinvested.online',
+          outroText: 'Subscribe for daily content!',
+          socialHandle: '@investednow',
+          websiteUrl: 'ifyouinvested.online'
+        },
+        music: 'modern',
+        voiceover: {
+          enabled: false,
+          gender: 'male',
+          accent: 'US',
+          autoScript: true,
+          scriptText: ''
+        },
+        animationStyle: 'standard',
+        title: 'WHICH INVESTMENT MADE YOU RICHER?',
+        durationInFrames
+      } : { results, layout, theme };
+
       const res = await fetch('/api/render-video', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ results, layout, theme }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error('Render failed');
@@ -52,7 +119,7 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `investment-simulation-${layout}.mp4`;
+      a.download = `investment-${videoStyle}-${layout}.mp4`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -68,7 +135,7 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
   };
 
   return (
-    <div className="w-full bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl overflow-hidden relative">
+    <div className="w-full bg-white/5 border border-white/10 rounded-3xl p-4 md:p-8 shadow-2xl overflow-hidden relative">
       <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
@@ -76,6 +143,27 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
           <h3 className="text-2xl font-bold text-white tracking-tight mb-2">Export Animation</h3>
           <p className="text-slate-400 font-medium text-sm">Download a video to share on social media.</p>
         </div>
+        
+        {/* Style Selection */}
+        <div className="flex items-center gap-2 bg-black/40 p-1.5 border border-white/10 rounded-xl">
+          <button
+            onClick={() => setVideoStyle('chart')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              videoStyle === 'chart' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Line Chart
+          </button>
+          <button
+            onClick={() => setVideoStyle('race')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              videoStyle === 'race' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Leaderboard Race
+          </button>
+        </div>
+
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
           <div className="flex items-center gap-2 bg-black/40 p-1.5 border border-white/10 rounded-xl overflow-x-auto w-full md:w-auto shrink-0">
             <button
@@ -146,30 +234,71 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
         </Button>
       </div>
       
-      <div className="flex justify-center items-center bg-black/50 border border-white/5 rounded-2xl p-4 md:p-8 min-h-[400px] md:min-h-[600px] relative">
+      <div className="flex justify-center items-center bg-black/50 border border-white/5 rounded-2xl p-2 md:p-8 min-h-[300px] md:min-h-[600px] relative">
         <motion.div 
-          key={`${layout}-${theme}`}
+          key={`${videoStyle}-${layout}-${theme}`}
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
           className="rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-4 border-white/10 bg-[#020617] w-full mx-auto relative"
           style={{ maxWidth: pProps.styleWidth }}
         >
-          <Player
-            component={VideoComposition}
-            inputProps={{ results, layout, theme }}
-            durationInFrames={durationInFrames}
-            compositionWidth={pProps.compWidth}
-            compositionHeight={pProps.compHeight}
-            fps={fps}
-            controls
-            acknowledgeRemotionLicense
-            style={{
-              width: '100%',
-              height: 'auto',
-              aspectRatio: `${pProps.compWidth} / ${pProps.compHeight}`,
-            }}
-          />
+          {videoStyle === 'race' ? (
+            <Player
+              component={StudioVideoComposition}
+              inputProps={{
+                templateId: 'leaderboard-race',
+                dataset: convertResultsToRaceDataset(results),
+                layout,
+                theme,
+                branding: {
+                  logoUrl: '',
+                  watermark: 'ifyouinvested.online',
+                  outroText: 'Subscribe for daily content!',
+                  socialHandle: '@investednow',
+                  websiteUrl: 'ifyouinvested.online'
+                },
+                music: 'modern',
+                voiceover: {
+                  enabled: false,
+                  gender: 'male',
+                  accent: 'US',
+                  autoScript: true,
+                  scriptText: ''
+                },
+                animationStyle: 'standard',
+                title: 'WHICH INVESTMENT MADE YOU RICHER?',
+                durationInFrames
+              }}
+              durationInFrames={durationInFrames}
+              compositionWidth={pProps.compWidth}
+              compositionHeight={pProps.compHeight}
+              fps={fps}
+              controls
+              acknowledgeRemotionLicense
+              style={{
+                width: '100%',
+                height: 'auto',
+                aspectRatio: `${pProps.compWidth} / ${pProps.compHeight}`,
+              }}
+            />
+          ) : (
+            <Player
+              component={VideoComposition}
+              inputProps={{ results, layout, theme }}
+              durationInFrames={durationInFrames}
+              compositionWidth={pProps.compWidth}
+              compositionHeight={pProps.compHeight}
+              fps={fps}
+              controls
+              acknowledgeRemotionLicense
+              style={{
+                width: '100%',
+                height: 'auto',
+                aspectRatio: `${pProps.compWidth} / ${pProps.compHeight}`,
+              }}
+            />
+          )}
         </motion.div>
       </div>
     </div>

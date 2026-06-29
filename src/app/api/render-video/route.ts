@@ -22,9 +22,11 @@ export async function POST(req: Request) {
     
     await fs.writeFile(propsPath, JSON.stringify(props));
 
-    console.log("Rendering video...");
+    const compositionId = props.templateId ? 'StudioVideo' : 'SimulationVideo';
+    console.log(`Rendering video for composition: ${compositionId}...`);
     // Run remotion CLI
-    const { stdout, stderr } = await execAsync(`npx remotion render src/remotion/index.ts SimulationVideo "${outPath}" --props="${propsPath}"`);
+    const browserArgs = process.env.NODE_ENV === 'production' ? '--browser-executable=/usr/bin/chromium --gl=angle' : '';
+    const { stdout, stderr } = await execAsync(`npx remotion render src/remotion/index.ts ${compositionId} "${outPath}" --props="${propsPath}" ${browserArgs}`);
     console.log(stdout);
     if (stderr) console.error(stderr);
     

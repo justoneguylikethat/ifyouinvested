@@ -45,6 +45,26 @@ async function getBundleUrl(): Promise<string> {
 }
 
 export async function POST(req: Request) {
+  // Trim environment variables to prevent TypeError [ERR_INVALID_CHAR] in authorization header
+  if (process.env.REMOTION_AWS_ACCESS_KEY_ID) {
+    process.env.REMOTION_AWS_ACCESS_KEY_ID = process.env.REMOTION_AWS_ACCESS_KEY_ID.trim();
+  }
+  if (process.env.REMOTION_AWS_SECRET_ACCESS_KEY) {
+    process.env.REMOTION_AWS_SECRET_ACCESS_KEY = process.env.REMOTION_AWS_SECRET_ACCESS_KEY.trim();
+  }
+  if (process.env.AWS_ACCESS_KEY_ID) {
+    process.env.AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID.trim();
+  }
+  if (process.env.AWS_SECRET_ACCESS_KEY) {
+    process.env.AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY.trim();
+  }
+  if (process.env.REMOTION_AWS_SERVE_URL) {
+    process.env.REMOTION_AWS_SERVE_URL = process.env.REMOTION_AWS_SERVE_URL.trim();
+  }
+  if (process.env.REMOTION_AWS_REGION) {
+    process.env.REMOTION_AWS_REGION = process.env.REMOTION_AWS_REGION.trim();
+  }
+
   // Extract client IP for rate limiting
   const forwarded = req.headers.get('x-forwarded-for');
   const clientIp = forwarded ? forwarded.split(',')[0].trim() : 'unknown';

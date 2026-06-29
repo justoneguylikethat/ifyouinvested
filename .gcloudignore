@@ -1,0 +1,20 @@
+# Google Cloud Run ignore file
+# Files/folders listed here are NOT uploaded during gcloud builds
+
+# Dependencies (rebuilt inside Docker)
+node_modules/
+
+# Build output
+.next/
+
+# Local env (secrets go to Secret Manager instead)
+.env*.local
+.env
+
+# Pre-built Remotion bundle (rebuilt during Docker build)
+public/remotion-bundle/
+
+# Dev files
+*.log
+.DS_Store
+.git/

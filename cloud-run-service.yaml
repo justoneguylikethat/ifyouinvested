@@ -1,0 +1,57 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: invested-now
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Scale down to 0 when idle (free tier)
+        autoscaling.knative.dev/minScale: "0"
+        # Never more than 1 instance (keeps in-memory render queue working)
+        autoscaling.knative.dev/maxScale: "1"
+        # Max 10 requests handled per instance at once
+        autoscaling.knative.dev/target: "10"
+        # CPU always allocated during request (needed for video rendering)
+        run.googleapis.com/cpu-throttling: "false"
+    spec:
+      containerConcurrency: 10
+      timeoutSeconds: 300
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/invested-now/invested-now:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              memory: 2Gi
+              cpu: "2"
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: NEXT_TELEMETRY_DISABLED
+              value: "1"
+            - name: NEXT_PUBLIC_APP_URL
+              value: https://ifyouinvested.online
+            # Secrets (set these via: gcloud secrets create ...)
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: GROQ_API_KEY
+                  key: latest
+            - name: ALPHA_VANTAGE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ALPHA_VANTAGE_API_KEY
+                  key: latest
+            - name: COINGECKO_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: COINGECKO_API_KEY
+                  key: latest
+            - name: POLYGON_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: POLYGON_API_KEY
+                  key: latest

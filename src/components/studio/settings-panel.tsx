@@ -36,7 +36,21 @@ export function SettingsPanel() {
         }),
       });
 
-      if (!res.ok) throw new Error('Studio render failed');
+      if (!res.ok) {
+        let errorMessage = 'Video rendering failed.';
+        try {
+          const errData = await res.json();
+          if (errData?.error) errorMessage = errData.error;
+        } catch {}
+        if (res.status === 429) {
+          toast.error(`⏳ ${errorMessage}`, { id: toastId });
+        } else if (res.status === 503) {
+          toast.error(`🔄 Server is busy. Please try again in a moment.`, { id: toastId });
+        } else {
+          toast.error(errorMessage, { id: toastId });
+        }
+        return;
+      }
 
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -47,14 +61,14 @@ export function SettingsPanel() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
       toast.success("Studio render complete! Downloaded.", { id: toastId });
     } catch (error) {
       console.error(error);
-      toast.error("Video rendering failed. Ensure local CLI is running.", { id: toastId });
+      toast.error("Video rendering failed. Please try again.", { id: toastId });
     } finally {
       setIsRendering(false);
     }
+
   };
 
   return (

@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import { bundle } from '@remotion/bundler';
 import { renderMedia, selectComposition } from '@remotion/renderer';
+import { enqueueRender } from '@/lib/render-queue';
 
 export const maxDuration = 300; // Allow long-running renders
 
@@ -28,7 +29,7 @@ async function getBundleUrl(): Promise<string> {
     return cachedBundleUrl;
   }
 
-  console.log('[render] No pre-built bundle found. Building Remotion bundle at runtime (this may take a moment)...');
+  console.log('[render] No pre-built bundle found. Building Remotion bundle at runtime...');
   cachedBundleUrl = await bundle({
     entryPoint: path.join(process.cwd(), 'src/remotion/index.ts'),
     onProgress: (p) => process.stdout.write(`\r[render] Bundling... ${Math.round(p * 100)}%`),
@@ -39,24 +40,26 @@ async function getBundleUrl(): Promise<string> {
 }
 
 export async function POST(req: Request) {
-  try {
+  // Extract client IP for rate limiting
+  const forwarded = req.headers.get('x-forwarded-for');
+  const clientIp = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+
+  const result = await enqueueRender(clientIp, async () => {
     const props = await req.json();
     const sessionId = Math.random().toString(36).substring(7);
     const outPath = path.join(os.tmpdir(), `out-${sessionId}.mp4`);
-    
+
     const compositionId = props.templateId ? 'StudioVideo' : 'SimulationVideo';
-    console.log(`[render] Rendering composition: ${compositionId}...`);
-    
+    console.log(`[render] Rendering composition: ${compositionId} for IP: ${clientIp}`);
+
     const serveUrl = await getBundleUrl();
-    
-    // Select the composition with props
+
     const composition = await selectComposition({
       serveUrl,
       id: compositionId,
       inputProps: props,
     });
-    
-    // Render the video with memory-saving settings
+
     await renderMedia({
       composition,
       serveUrl,
@@ -72,31 +75,29 @@ export async function POST(req: Request) {
           '--disable-gpu',
           '--single-process',
           '--no-zygote',
-          '--js-flags=--max-old-space-size=512'
+          '--js-flags=--max-old-space-size=512',
         ],
-        executablePath: process.env.NODE_ENV === 'production' ? '/usr/bin/chromium' : undefined,
-      },
-    });
-    
-    // Read the rendered video and return it
-    const videoBuffer = await fs.readFile(outPath);
-    await fs.unlink(outPath).catch(console.error);
-    
-    return new NextResponse(videoBuffer, {
-      headers: {
-        'Content-Type': 'video/mp4',
-        'Content-Disposition': 'attachment; filename="simulation.mp4"',
+        executablePath:
+          process.env.NODE_ENV === 'production' ? '/usr/bin/chromium' : undefined,
       },
     });
 
-  } catch (error) {
-    console.error('[render] Failed to render video:', error);
+    const videoBuffer = await fs.readFile(outPath);
+    await fs.unlink(outPath).catch(console.error);
+    return videoBuffer;
+  });
+
+  if (!result.ok) {
     return NextResponse.json(
-      { 
-        error: 'Failed to render video', 
-        details: error instanceof Error ? error.message : String(error)
-      }, 
-      { status: 500 }
+      { error: result.message },
+      { status: result.status }
     );
   }
+
+  return new NextResponse(result.value, {
+    headers: {
+      'Content-Type': 'video/mp4',
+      'Content-Disposition': 'attachment; filename="simulation.mp4"',
+    },
+  });
 }

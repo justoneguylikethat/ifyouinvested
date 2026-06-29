@@ -113,7 +113,21 @@ export function VideoExportView({ results }: { results: InvestmentResult[] }) {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error('Render failed');
+      if (!res.ok) {
+        let errorMessage = 'Render failed. Please try again.';
+        try {
+          const errData = await res.json();
+          if (errData?.error) errorMessage = errData.error;
+        } catch {}
+        if (res.status === 429) {
+          toast.error(`⏳ ${errorMessage}`, { id: toastId });
+        } else if (res.status === 503) {
+          toast.error(`🔄 Server is busy rendering. Please wait a moment and try again.`, { id: toastId });
+        } else {
+          throw new Error(errorMessage);
+        }
+        return;
+      }
 
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);

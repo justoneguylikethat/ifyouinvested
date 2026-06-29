@@ -17,9 +17,7 @@ export async function POST(req: Request) {
     console.log(`Bundling and rendering video for composition: ${compositionId}...`);
     
     // Bundle the remotion project
-    const bundled = await bundle(path.join(process.cwd(), "src/remotion/index.ts"), {
-      webpackOverride: (config) => config,
-    });
+    const bundled = await bundle(path.join(process.cwd(), "src/remotion/index.ts"));
     
     // Select the composition with props
     const composition = await selectComposition({
@@ -56,7 +54,10 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error("Failed to render video:", error);
-    return NextResponse.json({ error: 'Failed to render video' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to render video', details: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined }, 
+      { status: 500 }
+    );
   }
 }
 

@@ -9,8 +9,13 @@ export async function getYahooHistoricalData(
   const period1 = Math.floor(new Date(startDate).getTime() / 1000);
   const period2 = Math.floor(new Date(endDate).getTime() / 1000);
   
+  // Determine optimal interval: daily resolution if date range is <= 90 days
+  const diffTime = Math.abs(new Date(endDate).getTime() - new Date(startDate).getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const interval = diffDays <= 90 ? '1d' : '1mo';
+
   // Build URL for Yahoo Chart API
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${period1}&period2=${period2}&interval=1mo`;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${period1}&period2=${period2}&interval=${interval}`;
 
   const response = await fetch(url, { next: { revalidate: 3600 } });
   

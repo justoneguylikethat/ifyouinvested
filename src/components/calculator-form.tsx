@@ -76,6 +76,62 @@ export function CalculatorForm({ onCalculate, isLoading, assetFilter }: Calculat
     return defaults;
   });
   const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const amountParam = params.get('amount');
+    const startParam = params.get('start');
+    const endParam = params.get('end');
+    const assetsParam = params.get('assets');
+
+    let loadedAmount = amount;
+    let loadedStart = startDate;
+    let loadedEnd = endDate;
+
+    if (amountParam) {
+      const val = Number(amountParam);
+      if (!isNaN(val) && val > 0) {
+        setAmount(val);
+        loadedAmount = val;
+      }
+    }
+    if (startParam) {
+      const d = new Date(startParam);
+      if (!isNaN(d.getTime())) {
+        setStartDate(d);
+        loadedStart = d;
+      }
+    }
+    if (endParam) {
+      const d = new Date(endParam);
+      if (!isNaN(d.getTime())) {
+        setEndDate(d);
+        loadedEnd = d;
+      }
+    }
+
+    if (assetsParam) {
+      fetch(`/api/assets/details?symbols=${encodeURIComponent(assetsParam)}`)
+        .then(res => res.ok ? res.json() : { results: [] })
+        .then(data => {
+          if (data.results && data.results.length > 0) {
+            const normalized = data.results.map((a: any) => ({
+              symbol: a.symbol,
+              name: a.name,
+              type: a.type === 'CRYPTOCURRENCY' ? 'crypto' : (a.type === 'ETF' ? 'etf' : 'stock')
+            }));
+            setSelectedAssets(normalized);
+            onCalculate({
+              amount: loadedAmount,
+              startDate: format(loadedStart, "yyyy-MM-dd"),
+              endDate: format(loadedEnd, "yyyy-MM-dd"),
+              assets: normalized,
+            });
+          }
+        })
+        .catch(err => console.error("Failed to load search parameters on-load", err));
+    }
+  }, []);
  
   useEffect(() => {
     const timer = setTimeout(async () => {

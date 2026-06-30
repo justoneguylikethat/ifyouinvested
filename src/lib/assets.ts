@@ -97,6 +97,14 @@ export const POPULAR_ASSETS: Asset[] = [
   { symbol: 'ZM', name: 'Zoom Video', type: 'stock', logoUrl: 'https://logo.clearbit.com/zoom.us' },
   { symbol: 'COIN', name: 'Coinbase Global', type: 'stock', logoUrl: 'https://logo.clearbit.com/coinbase.com' },
 
+  // Top International Stocks
+  { symbol: 'MC.PA', name: 'LVMH (Paris)', type: 'stock', logoUrl: 'https://logo.clearbit.com/lvmh.com' },
+  { symbol: 'ASML.AS', name: 'ASML Holding (Amsterdam)', type: 'stock', logoUrl: 'https://logo.clearbit.com/asml.com' },
+  { symbol: 'BP.L', name: 'BP plc (London)', type: 'stock', logoUrl: 'https://logo.clearbit.com/bp.com' },
+  { symbol: '7203.T', name: 'Toyota Motor (Tokyo)', type: 'stock', logoUrl: 'https://logo.clearbit.com/toyota.co.jp' },
+  { symbol: 'RELIANCE.NS', name: 'Reliance Industries (India)', type: 'stock', logoUrl: 'https://logo.clearbit.com/ril.com' },
+  { symbol: 'AZN.L', name: 'AstraZeneca plc (London)', type: 'stock', logoUrl: 'https://logo.clearbit.com/astrazeneca.com' },
+
   // Top Cryptocurrencies
   { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', type: 'crypto', logoUrl: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png' },
   { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', type: 'crypto', logoUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.png' },

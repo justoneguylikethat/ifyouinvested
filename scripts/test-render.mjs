@@ -27,7 +27,7 @@ async function fullRender() {
     },
     codec: 'h264',
     serveUrl: SERVE_URL,
-    framesPerLambda: 200,
+    framesPerLambda: 120,
     maxRetries: 1,
   });
 

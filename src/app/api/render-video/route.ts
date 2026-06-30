@@ -91,9 +91,9 @@ export async function POST(req: Request) {
       });
 
       // 1. Trigger the render on Lambda
-      // Video is 600-960 frames. framesPerLambda=200 → max 5 concurrent lambdas,
-      // well under the AWS default account limit of 10. Increase this limit via
-      // AWS Service Quotas if you need higher throughput.
+      // Video is 600-960 frames. framesPerLambda=120 parallelizes across 5-8 concurrent Lambdas.
+      // This reduces render time from 70s to ~20s, avoiding gateway timeouts while
+      // remaining safely under the AWS account default limit of 10 concurrent executions.
       const { renderId, bucketName } = await renderVideoOnLambda({
         region,
         functionName,
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
         inputProps: props,
         codec: 'h264',
         serveUrl: process.env.REMOTION_AWS_SERVE_URL!,
-        framesPerLambda: 200,
+        framesPerLambda: 120,
         maxRetries: 1,
       });
 

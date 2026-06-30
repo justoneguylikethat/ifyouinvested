@@ -61,20 +61,20 @@ export function ResultsDisplay({ results }: { results: InvestmentResult[] }) {
                   <div>
                     <p className="text-[11px] uppercase font-bold tracking-wider text-slate-500 mb-1">ROI</p>
                     <p className={`font-semibold ${isPositive ? 'text-emerald-400' : 'text-destructive'}`}>
-                      {isPositive ? '+' : '-'}{Math.abs(Number(result.percentageReturn)).toFixed(2)}%
+                      {isPositive ? '+' : '-'}{Math.abs(Number(result.percentageReturn || 0)).toFixed(2)}%
                     </p>
                   </div>
                   <div>
                     <p className="text-[11px] uppercase font-bold tracking-wider text-slate-500 mb-1">CAGR</p>
-                    <p className={`font-semibold ${Number(result.cagr) >= 0 ? 'text-blue-400' : 'text-destructive'}`}>
-                      {Number(result.cagr) >= 0 ? '+' : '-'}{Math.abs(Number(result.cagr)).toFixed(2)}%
+                    <p className={`font-semibold ${Number(result.cagr || 0) >= 0 ? 'text-blue-400' : 'text-destructive'}`}>
+                      {Number(result.cagr || 0) >= 0 ? '+' : '-'}{Math.abs(Number(result.cagr || 0)).toFixed(2)}%
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
                   <CircleDollarSign className="w-4 h-4 opacity-50" />
-                  <span>Bought {result.sharesPurchased.toFixed(4)} shares at {formatCurrency(result.startValue)}</span>
+                  <span>Bought {(result.sharesPurchased || 0).toFixed(4)} shares at {formatCurrency(result.startValue)}</span>
                 </div>
               </div>
             </div>

@@ -146,8 +146,10 @@ export function GrowthChart({ results }: GrowthChartProps) {
                 color: '#fff',
                 boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
               }}
-              itemStyle={{ fontWeight: 'bold' }}
-              formatter={(value: number) => [`$${value.toFixed(2)}`, "Value"]}
+              formatter={(value: any) => {
+                if (value === null || value === undefined) return ["N/A", "Value"];
+                return [`$${Number(value).toFixed(2)}`, "Value"];
+              }}
             />
             {results.map((result, index) => (
               <Area

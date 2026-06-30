@@ -87,25 +87,17 @@ export function SettingsPanel() {
       if (!downloadUrl) {
         // Fallback for local synchronous rendering
         const blob = await res.blob();
-        const localUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = localUrl;
-        a.download = `${state.templateId}-render-${state.layout}.mp4`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(localUrl);
-        document.body.removeChild(a);
-      } else {
-        // Direct external link to S3 to bypass browser CORS checks on fetch
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = `${state.templateId}-render-${state.layout}.mp4`;
-        a.target = "_blank";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        downloadUrl = window.URL.createObjectURL(blob);
       }
-      toast.success("Studio render complete! Downloaded.", { id: toastId });
+
+      // Open the video directly in a new tab (bypasses S3 CORS and allows instant playback)
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success("Studio render complete! Opened in a new tab.", { id: toastId });
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Video rendering failed. Please try again.", { id: toastId });

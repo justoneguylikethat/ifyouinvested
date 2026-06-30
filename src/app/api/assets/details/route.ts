@@ -15,8 +15,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'No symbols provided' }, { status: 400 });
   }
 
-  // To prevent rate limits or timeout, limit to 50 at a time
-  const symbols = symbolsParam.split(',').filter(Boolean).slice(0, 50);
+  // Map conflicted meme tokens to correct Yahoo Finance symbols and track original requested name
+  const originalMappings = new Map<string, string>();
+  const symbols = symbolsParam.split(',').filter(Boolean).slice(0, 50).map(s => {
+    const upper = s.toUpperCase();
+    if (upper === 'PEPE' || upper === 'PEPE-USD') {
+      originalMappings.set('PEPE24478-USD', s);
+      return 'PEPE24478-USD';
+    }
+    if (upper === 'POPCAT' || upper === 'POPCAT-USD') {
+      originalMappings.set('POPCAT28782-USD', s);
+      return 'POPCAT28782-USD';
+    }
+    return s;
+  });
   
   try {
     const results = await Promise.all(symbols.map(async (symbol) => {
@@ -35,9 +47,10 @@ export async function GET(request: Request) {
         });
 
         const sparkline = history.map(h => h.close);
+        const cleanSymbol = originalMappings.get(quote.symbol) || quote.symbol;
 
         return {
-          symbol: quote.symbol,
+          symbol: cleanSymbol,
           name: quote.shortName || quote.longName,
           price: quote.regularMarketPrice,
           change: quote.regularMarketChangePercent,

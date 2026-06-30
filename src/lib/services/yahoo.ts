@@ -6,6 +6,14 @@ export async function getYahooHistoricalData(
   startDate: string,
   endDate: string
 ): Promise<PricePoint[]> {
+  // Map conflicted meme tokens to correct Yahoo Finance suffix symbols
+  const cleanSymbol = symbol.toUpperCase();
+  if (cleanSymbol === 'PEPE' || cleanSymbol === 'PEPE-USD') {
+    symbol = 'PEPE24478-USD';
+  } else if (cleanSymbol === 'POPCAT' || cleanSymbol === 'POPCAT-USD') {
+    symbol = 'POPCAT28782-USD';
+  }
+
   // Determine optimal interval: daily resolution if date range is <= 90 days
   const diffTime = Math.abs(new Date(endDate).getTime() - new Date(startDate).getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

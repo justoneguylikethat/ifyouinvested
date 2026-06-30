@@ -54,6 +54,14 @@ interface CalculatorFormProps {
   mode?: 'standard' | 'memecoin';
 }
 
+const MEMECOIN_PRESETS = [
+  { label: '24h', value: '24h', days: 1 },
+  { label: '48h', value: '48h', days: 2 },
+  { label: '1w', value: '1w', days: 7 },
+  { label: '2w', value: '2w', days: 14 },
+  { label: '1m', value: '1m', days: 30 },
+];
+
 export function CalculatorForm({ onCalculate, isLoading, assetFilter, defaultDaysAgo, mode }: CalculatorFormProps) {
   const [amount, setAmount] = useState<number>(1000);
   const [startDate, setStartDate] = useState<Date>(() => {
@@ -65,6 +73,31 @@ export function CalculatorForm({ onCalculate, isLoading, assetFilter, defaultDay
     return new Date("2020-01-01");
   });
   const [endDate, setEndDate] = useState<Date>(new Date());
+  
+  const [memePreset, setMemePreset] = useState<string>(() => {
+    if (defaultDaysAgo === 1) return '24h';
+    if (defaultDaysAgo === 2) return '48h';
+    if (defaultDaysAgo === 7) return '1w';
+    if (defaultDaysAgo === 14) return '2w';
+    if (defaultDaysAgo === 30) return '1m';
+    return '24h';
+  });
+
+  const applyMemePreset = (presetVal: string, days: number) => {
+    setMemePreset(presetVal);
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    setStartDate(start);
+    const end = new Date();
+    setEndDate(end);
+
+    onCalculate({
+      amount,
+      startDate: format(start, "yyyy-MM-dd"),
+      endDate: format(end, "yyyy-MM-dd"),
+      assets: selectedAssets,
+    });
+  };
   
   const [selectedAssets, setSelectedAssets] = useState<Asset[]>(() => {
     if (mode === 'memecoin') {
@@ -118,6 +151,15 @@ export function CalculatorForm({ onCalculate, isLoading, assetFilter, defaultDay
       if (!isNaN(d.getTime())) {
         setStartDate(d);
         loadedStart = d;
+
+        // Determine matching preset
+        const diffDays = Math.round(Math.abs(new Date().getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) setMemePreset('24h');
+        else if (diffDays === 2) setMemePreset('48h');
+        else if (diffDays === 7) setMemePreset('1w');
+        else if (diffDays === 14) setMemePreset('2w');
+        else if (diffDays === 30) setMemePreset('1m');
+        else setMemePreset(''); // Custom range from URL
       }
     } else if (defaultDaysAgo) {
       // Set to dynamic offset on load if no explicit query start parameter exists
@@ -287,67 +329,90 @@ export function CalculatorForm({ onCalculate, isLoading, assetFilter, defaultDay
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {mode === 'memecoin' ? (
         <div className="space-y-3">
-          <Label className="text-xs font-bold text-slate-500 tracking-wider uppercase">Start</Label>
-          <Popover>
-            <PopoverTrigger
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "w-full h-12 justify-start text-left font-medium bg-[#0F172A] border-white/5 hover:bg-white/5 hover:text-white rounded-xl transition-all text-sm px-4",
-                !startDate && "text-slate-400"
-              )}
-            >
-              <div className="flex items-center justify-between w-full">
-                <span>{startDate ? format(startDate, "MM/dd/yyyy") : "Pick a date"}</span>
-                <CalendarIcon className="h-4 w-4 text-slate-400" />
-              </div>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-[#0F172A] border-white/10 rounded-xl shadow-xl">
-              <Calendar
-                mode="single"
-                selected={startDate}
-                onSelect={(date) => date && setStartDate(date)}
-                initialFocus
-                captionLayout="dropdown"
-                fromYear={1970}
-                toYear={new Date().getFullYear()}
-                className="bg-[#0F172A] text-white"
-              />
-            </PopoverContent>
-          </Popover>
+          <Label className="text-xs font-bold text-slate-500 tracking-wider uppercase">Time Range</Label>
+          <div className="grid grid-cols-5 gap-1.5 p-1 bg-[#0F172A] border border-white/5 rounded-2xl">
+            {MEMECOIN_PRESETS.map((preset) => (
+              <button
+                key={preset.value}
+                type="button"
+                onClick={() => applyMemePreset(preset.value, preset.days)}
+                className={cn(
+                  "py-2.5 rounded-xl text-xs font-bold transition-all",
+                  memePreset === preset.value
+                    ? "bg-blue-600 text-white shadow-lg"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                )}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
         </div>
-        
-        <div className="space-y-3">
-          <Label className="text-xs font-bold text-slate-500 tracking-wider uppercase">End</Label>
-          <Popover>
-            <PopoverTrigger
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "w-full h-12 justify-start text-left font-medium bg-[#0F172A] border-white/5 hover:bg-white/5 hover:text-white rounded-xl transition-all text-sm px-4",
-                !endDate && "text-slate-400"
-              )}
-            >
-              <div className="flex items-center justify-between w-full">
-                <span>{endDate ? format(endDate, "MM/dd/yyyy") : "Pick a date"}</span>
-                <CalendarIcon className="h-4 w-4 text-slate-400" />
-              </div>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-[#0F172A] border-white/10 rounded-xl shadow-xl">
-              <Calendar
-                mode="single"
-                selected={endDate}
-                onSelect={(date) => date && setEndDate(date)}
-                initialFocus
-                captionLayout="dropdown"
-                fromYear={1970}
-                toYear={new Date().getFullYear()}
-                className="bg-[#0F172A] text-white"
-              />
-            </PopoverContent>
-          </Popover>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <Label className="text-xs font-bold text-slate-500 tracking-wider uppercase">Start</Label>
+            <Popover>
+              <PopoverTrigger
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "w-full h-12 justify-start text-left font-medium bg-[#0F172A] border-white/5 hover:bg-white/5 hover:text-white rounded-xl transition-all text-sm px-4",
+                  !startDate && "text-slate-400"
+                )}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span>{startDate ? format(startDate, "MM/dd/yyyy") : "Pick a date"}</span>
+                  <CalendarIcon className="h-4 w-4 text-slate-400" />
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-[#0F172A] border-white/10 rounded-xl shadow-xl">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={(date) => date && setStartDate(date)}
+                  initialFocus
+                  captionLayout="dropdown"
+                  fromYear={1970}
+                  toYear={new Date().getFullYear()}
+                  className="bg-[#0F172A] text-white"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          
+          <div className="space-y-3">
+            <Label className="text-xs font-bold text-slate-500 tracking-wider uppercase">End</Label>
+            <Popover>
+              <PopoverTrigger
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "w-full h-12 justify-start text-left font-medium bg-[#0F172A] border-white/5 hover:bg-white/5 hover:text-white rounded-xl transition-all text-sm px-4",
+                  !endDate && "text-slate-400"
+                )}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span>{endDate ? format(endDate, "MM/dd/yyyy") : "Pick a date"}</span>
+                  <CalendarIcon className="h-4 w-4 text-slate-400" />
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-[#0F172A] border-white/10 rounded-xl shadow-xl">
+                <Calendar
+                  mode="single"
+                  selected={endDate}
+                  onSelect={(date) => date && setEndDate(date)}
+                  initialFocus
+                  captionLayout="dropdown"
+                  fromYear={1970}
+                  toYear={new Date().getFullYear()}
+                  className="bg-[#0F172A] text-white"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="space-y-3 flex-1">
         <Label className="text-xs font-bold text-slate-500 tracking-wider uppercase">Assets ({selectedAssets.length}/5)</Label>

@@ -6,14 +6,19 @@ export async function getYahooHistoricalData(
   startDate: string,
   endDate: string
 ): Promise<PricePoint[]> {
-  const period1 = Math.floor(new Date(startDate).getTime() / 1000);
-  const period2 = Math.floor(new Date(endDate).getTime() / 1000);
-  
   // Determine optimal interval: daily resolution if date range is <= 90 days
   const diffTime = Math.abs(new Date(endDate).getTime() - new Date(startDate).getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const interval = diffDays <= 90 ? '1d' : '1mo';
 
+  let adjustedStartDate = new Date(startDate);
+  if (diffDays <= 7) {
+    // Lookback an extra 10 days to guarantee at least 2 trading days are covered (handles weekends/holidays)
+    adjustedStartDate.setDate(adjustedStartDate.getDate() - 10);
+  }
+  const period1 = Math.floor(adjustedStartDate.getTime() / 1000);
+  const period2 = Math.floor(new Date(endDate).getTime() / 1000);
+  
   // Build URL for Yahoo Chart API
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${period1}&period2=${period2}&interval=${interval}`;
 

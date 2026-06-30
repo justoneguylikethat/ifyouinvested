@@ -87,21 +87,24 @@ export function SettingsPanel() {
       if (!downloadUrl) {
         // Fallback for local synchronous rendering
         const blob = await res.blob();
-        downloadUrl = window.URL.createObjectURL(blob);
+        const localUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = localUrl;
+        a.download = `${state.templateId}-render-${state.layout}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(localUrl);
+        document.body.removeChild(a);
       } else {
-        // Download the final URL from S3
-        const videoRes = await fetch(downloadUrl);
-        const blob = await videoRes.blob();
-        downloadUrl = window.URL.createObjectURL(blob);
+        // Direct external link to S3 to bypass browser CORS checks on fetch
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `${state.templateId}-render-${state.layout}.mp4`;
+        a.target = "_blank";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
-
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = `${state.templateId}-render-${state.layout}.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(downloadUrl);
-      document.body.removeChild(a);
       toast.success("Studio render complete! Downloaded.", { id: toastId });
     } catch (error: any) {
       console.error(error);

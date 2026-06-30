@@ -21,12 +21,20 @@ export async function calculateInvestment(
     throw new Error(`Failed to fetch historical data for ${asset.name}`);
   }
 
-  if (history.length < 2) {
+  // Filter history to only include points within the user's requested date range
+  let finalHistory = history.filter(point => point.date >= startDate && point.date <= endDate);
+
+  // If there are less than 2 matching points (e.g. weekends or unclosed days), fall back to the last 2 available data points
+  if (finalHistory.length < 2) {
+    finalHistory = history.slice(-2);
+  }
+
+  if (finalHistory.length < 2) {
     throw new Error(`Not enough historical data found for ${asset.name} in this date range.`);
   }
 
-  const startPrice = history[0].price;
-  const endPrice = history[history.length - 1].price;
+  const startPrice = finalHistory[0].price;
+  const endPrice = finalHistory[finalHistory.length - 1].price;
   
   const sharesPurchased = amount / startPrice;
   const finalValue = sharesPurchased * endPrice;
@@ -40,7 +48,7 @@ export async function calculateInvestment(
   const cagr = (Math.pow(finalValue / amount, 1 / years) - 1) * 100;
 
   // Scale the history to represent the portfolio value over time, not just the single asset price
-  const portfolioHistory = history.map(point => ({
+  const portfolioHistory = finalHistory.map(point => ({
     date: point.date,
     price: point.price * sharesPurchased
   }));

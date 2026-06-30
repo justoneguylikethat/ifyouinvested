@@ -238,18 +238,25 @@ export function VideoExportView({ results, mode = 'investment' }: { results: Inv
       if (!downloadUrl) {
         // Fallback for local synchronous rendering
         const blob = await res.blob();
-        downloadUrl = window.URL.createObjectURL(blob);
+        const localUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = localUrl;
+        a.download = `investment-${videoStyle}-${layout}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(localUrl);
+        document.body.removeChild(a);
+      } else {
+        // Direct download using our proxy endpoint to bypass S3 CORS policies
+        const proxyUrl = `/api/download-video?url=${encodeURIComponent(downloadUrl)}`;
+        const a = document.createElement('a');
+        a.href = proxyUrl;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
-
-      // Open the video directly in a new tab (bypasses S3 CORS and allows instant playback)
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
       
-      toast.success("Your video is ready and has opened in a new tab!", { id: toastId });
+      toast.success("Your video is ready and has been downloaded!", { id: toastId });
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Failed to render video. Please try again.", { id: toastId });

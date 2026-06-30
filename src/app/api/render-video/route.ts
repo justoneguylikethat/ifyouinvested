@@ -127,14 +127,16 @@ export async function POST(req: Request) {
         throw new Error(`Lambda render failed: ${progress.errors[0]?.message || 'Unknown error'}`);
       }
 
-      if (!progress.outputUrl) {
-        throw new Error('Lambda render complete but no outputUrl returned.');
+      // Remotion returns outputFile (S3 URL of the rendered video)
+      const outputUrl = progress.outputFile || (progress as any).outputUrl;
+      if (!outputUrl) {
+        throw new Error('Lambda render complete but no output URL returned.');
       }
 
-      console.log(`[render] AWS Lambda render complete! Output: ${progress.outputUrl}`);
+      console.log(`[render] AWS Lambda render complete! Output: ${outputUrl}`);
 
       // 3. Fetch finished video and return buffer
-      const videoRes = await fetch(progress.outputUrl);
+      const videoRes = await fetch(outputUrl);
       if (!videoRes.ok) {
         throw new Error(`Failed to fetch rendered video from S3: ${videoRes.statusText}`);
       }

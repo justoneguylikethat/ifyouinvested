@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PieChart, DollarSign, Coffee, Search, AlertTriangle, Calculator, PiggyBank, Percent, Bot, TrendingUp, Newspaper, Trophy } from "lucide-react";
+import { PieChart, DollarSign, Coffee, Search, AlertTriangle, Calculator, PiggyBank, Percent, Bot, TrendingUp, Newspaper, Trophy, Flame } from "lucide-react";
 
 export const PLAYGROUND_TOOLS = [
   { 
@@ -9,6 +9,14 @@ export const PLAYGROUND_TOOLS = [
     icon: Trophy,
     color: "text-yellow-400",
     bg: "bg-yellow-500/10"
+  },
+  { 
+    name: "24h Memecoin Calculator 🔥", 
+    description: "Calculate 24-hour returns for Pepe, Dogecoin, and minor altcoins.",
+    href: "/memecoin-calculator", 
+    icon: Flame,
+    color: "text-amber-500",
+    bg: "bg-amber-500/10"
   },
   { 
     name: "Investment Calculator", 

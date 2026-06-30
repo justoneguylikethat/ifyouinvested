@@ -50,13 +50,27 @@ interface CalculatorFormProps {
   onCalculate: (data: { amount: number; startDate: string; endDate: string; assets: Asset[] }) => void;
   isLoading: boolean;
   assetFilter?: AssetType | AssetType[];
+  defaultDaysAgo?: number;
+  mode?: 'standard' | 'memecoin';
 }
 
-export function CalculatorForm({ onCalculate, isLoading, assetFilter }: CalculatorFormProps) {
+export function CalculatorForm({ onCalculate, isLoading, assetFilter, defaultDaysAgo, mode }: CalculatorFormProps) {
   const [amount, setAmount] = useState<number>(1000);
-  const [startDate, setStartDate] = useState<Date>(new Date("2020-01-01"));
+  const [startDate, setStartDate] = useState<Date>(() => {
+    if (defaultDaysAgo) {
+      const d = new Date();
+      d.setDate(d.getDate() - defaultDaysAgo);
+      return d;
+    }
+    return new Date("2020-01-01");
+  });
   const [endDate, setEndDate] = useState<Date>(new Date());
+  
   const [selectedAssets, setSelectedAssets] = useState<Asset[]>(() => {
+    if (mode === 'memecoin') {
+      const pepe = POPULAR_ASSETS.find(a => a.symbol === 'PEPE');
+      if (pepe) return [pepe];
+    }
     let defaults = MIXED_ASSETS;
     if (assetFilter) {
       const filters = Array.isArray(assetFilter) ? assetFilter : [assetFilter];
@@ -68,6 +82,10 @@ export function CalculatorForm({ onCalculate, isLoading, assetFilter }: Calculat
   
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Asset[]>(() => {
+    if (mode === 'memecoin') {
+      const memecoinSymbols = ['PEPE', 'DOGE', 'SHIB', 'BONK', 'WIF', 'FLOKI', 'POPCAT', 'SOL', 'BTC', 'ETH'];
+      return POPULAR_ASSETS.filter(a => memecoinSymbols.includes(a.symbol));
+    }
     let defaults = MIXED_ASSETS;
     if (assetFilter) {
       const filters = Array.isArray(assetFilter) ? assetFilter : [assetFilter];
@@ -101,6 +119,12 @@ export function CalculatorForm({ onCalculate, isLoading, assetFilter }: Calculat
         setStartDate(d);
         loadedStart = d;
       }
+    } else if (defaultDaysAgo) {
+      // Set to dynamic offset on load if no explicit query start parameter exists
+      const d = new Date();
+      d.setDate(d.getDate() - defaultDaysAgo);
+      setStartDate(d);
+      loadedStart = d;
     }
     if (endParam) {
       const d = new Date(endParam);
@@ -130,6 +154,17 @@ export function CalculatorForm({ onCalculate, isLoading, assetFilter }: Calculat
           }
         })
         .catch(err => console.error("Failed to load search parameters on-load", err));
+    } else if (mode === 'memecoin') {
+      // Trigger default calculation for memecoin on load if no asset is explicitly provided in the URL query
+      const pepe = POPULAR_ASSETS.find(a => a.symbol === 'PEPE');
+      if (pepe) {
+        onCalculate({
+          amount: loadedAmount,
+          startDate: format(loadedStart, "yyyy-MM-dd"),
+          endDate: format(loadedEnd, "yyyy-MM-dd"),
+          assets: [pepe],
+        });
+      }
     }
   }, []);
  
@@ -137,7 +172,10 @@ export function CalculatorForm({ onCalculate, isLoading, assetFilter }: Calculat
     const timer = setTimeout(async () => {
       if (!searchQuery) {
         let defaults = MIXED_ASSETS;
-        if (assetFilter) {
+        if (mode === 'memecoin') {
+          const memecoinSymbols = ['PEPE', 'DOGE', 'SHIB', 'BONK', 'WIF', 'FLOKI', 'POPCAT', 'SOL', 'BTC', 'ETH'];
+          defaults = POPULAR_ASSETS.filter(a => memecoinSymbols.includes(a.symbol));
+        } else if (assetFilter) {
           const filters = Array.isArray(assetFilter) ? assetFilter : [assetFilter];
           defaults = defaults.filter(a => filters.includes(a.type));
         }

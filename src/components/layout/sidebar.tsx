@@ -28,7 +28,8 @@ import {
   Menu,
   Gamepad2,
   X,
-  Download
+  Download,
+  Flame
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ const navGroups = [
     items: [
       { name: "Dashboard", href: "/", icon: LayoutDashboard },
       { name: "Investment Calculator", href: "/calculator", icon: Calculator },
+      { name: "24h Memecoin Calculator", href: "/memecoin-calculator", icon: Flame },
       { name: "Future Predictions", href: "/predict", icon: Bot },
     ]
   },

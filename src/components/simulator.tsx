@@ -16,9 +16,11 @@ export interface SimulatorProps {
   subtitle: ReactNode;
   assetFilter?: AssetType | AssetType[];
   initialResults?: InvestmentResult[];
+  defaultDaysAgo?: number;
+  mode?: 'standard' | 'memecoin';
 }
 
-export function Simulator({ title, subtitle, assetFilter, initialResults }: SimulatorProps) {
+export function Simulator({ title, subtitle, assetFilter, initialResults, defaultDaysAgo, mode }: SimulatorProps) {
   const [results, setResults] = useState<InvestmentResult[]>(initialResults || []);
   const [aiInsights, setAiInsights] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,7 +58,13 @@ export function Simulator({ title, subtitle, assetFilter, initialResults }: Simu
           {/* Left Column: Calculator */}
           <div className="w-full lg:w-[400px] xl:w-[450px] shrink-0">
             <div className="sticky top-8">
-              <CalculatorForm onCalculate={handleCalculate} isLoading={isLoading} assetFilter={assetFilter} />
+              <CalculatorForm 
+                onCalculate={handleCalculate} 
+                isLoading={isLoading} 
+                assetFilter={assetFilter} 
+                defaultDaysAgo={defaultDaysAgo}
+                mode={mode}
+              />
               
               <AnimatePresence>
                 {error && (

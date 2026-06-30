@@ -129,6 +129,11 @@ export const POPULAR_ASSETS: Asset[] = [
   { id: 'maker', symbol: 'MKR', name: 'Maker', type: 'crypto', logoUrl: 'https://cryptologos.cc/logos/maker-mkr-logo.png' },
   { id: 'optimism', symbol: 'OP', name: 'Optimism', type: 'crypto', logoUrl: 'https://cryptologos.cc/logos/optimism-ethereum-op-logo.png' },
   { id: 'arbitrum', symbol: 'ARB', name: 'Arbitrum', type: 'crypto', logoUrl: 'https://cryptologos.cc/logos/arbitrum-arb-logo.png' },
+  { id: 'pepe', symbol: 'PEPE', name: 'Pepe', type: 'crypto', logoUrl: 'https://cryptologos.cc/logos/pepe-pepe-logo.png' },
+  { id: 'bonk', symbol: 'BONK', name: 'Bonk', type: 'crypto', logoUrl: 'https://cryptologos.cc/logos/bonk-bonk-logo.png' },
+  { id: 'dogwifhat', symbol: 'WIF', name: 'dogwifhat', type: 'crypto', logoUrl: 'https://cryptologos.cc/logos/dogwifhat-wif-logo.png' },
+  { id: 'floki', symbol: 'FLOKI', name: 'Floki', type: 'crypto', logoUrl: 'https://cryptologos.cc/logos/floki-floki-logo.png' },
+  { id: 'popcat', symbol: 'POPCAT', name: 'Popcat', type: 'crypto', logoUrl: 'https://cryptologos.cc/logos/popcat-popcat-logo.png' },
 
   // Top Index Funds & ETFs
   { symbol: 'SPY', name: 'SPDR S&P 500 ETF', type: 'etf' },

@@ -24,6 +24,12 @@ import { Label } from "@/components/ui/label";
 import { POPULAR_ASSETS } from "@/lib/assets";
 import { Asset, AssetType } from "@/lib/types";
 
+const SUGGESTED_SYMBOLS = ['BTC', 'ETH', 'SOL', 'DOGE', 'SHIB', 'PEPE', 'WIF', 'BONK', 'FLOKI', 'POPCAT', 'AAPL', 'NVDA', 'TSLA', 'MSFT', 'PLTR', 'SPY', 'QQQ'];
+const MIXED_ASSETS = [
+  ...POPULAR_ASSETS.filter(a => SUGGESTED_SYMBOLS.includes(a.symbol)),
+  ...POPULAR_ASSETS.filter(a => !SUGGESTED_SYMBOLS.includes(a.symbol))
+];
+
 const PRESET_AMOUNTS = [100, 1000, 10000];
 
 const getAssetColor = (symbol: string) => {
@@ -51,7 +57,7 @@ export function CalculatorForm({ onCalculate, isLoading, assetFilter }: Calculat
   const [startDate, setStartDate] = useState<Date>(new Date("2020-01-01"));
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [selectedAssets, setSelectedAssets] = useState<Asset[]>(() => {
-    let defaults = POPULAR_ASSETS;
+    let defaults = MIXED_ASSETS;
     if (assetFilter) {
       const filters = Array.isArray(assetFilter) ? assetFilter : [assetFilter];
       defaults = defaults.filter(a => filters.includes(a.type));
@@ -62,7 +68,7 @@ export function CalculatorForm({ onCalculate, isLoading, assetFilter }: Calculat
   
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Asset[]>(() => {
-    let defaults = POPULAR_ASSETS;
+    let defaults = MIXED_ASSETS;
     if (assetFilter) {
       const filters = Array.isArray(assetFilter) ? assetFilter : [assetFilter];
       defaults = defaults.filter(a => filters.includes(a.type));
@@ -70,11 +76,11 @@ export function CalculatorForm({ onCalculate, isLoading, assetFilter }: Calculat
     return defaults;
   });
   const [isSearching, setIsSearching] = useState(false);
-
+ 
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (!searchQuery) {
-        let defaults = POPULAR_ASSETS;
+        let defaults = MIXED_ASSETS;
         if (assetFilter) {
           const filters = Array.isArray(assetFilter) ? assetFilter : [assetFilter];
           defaults = defaults.filter(a => filters.includes(a.type));

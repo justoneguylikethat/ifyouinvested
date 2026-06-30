@@ -6,7 +6,7 @@ import { VideoComposition, VideoLayout, VideoTheme } from "../remotion/Compositi
 import { StudioVideoComposition } from "../remotion/StudioComposition";
 import { InvestmentResult } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Download, Monitor, Smartphone, Square, Loader2, Moon, Sun, Play } from "lucide-react";
+import { Download, Monitor, Smartphone, Square, Loader2, Moon, Sun, Play, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -91,6 +91,7 @@ export function VideoExportView({ results, mode = 'investment' }: { results: Inv
   const [theme, setTheme] = useState<VideoTheme>('dark');
   const [videoStyle, setVideoStyle] = useState<'chart' | 'race' | 'lifestyle'>(mode === 'lifestyle' ? 'lifestyle' : 'chart');
   const [isRendering, setIsRendering] = useState(false);
+  const [renderProgress, setRenderProgress] = useState<number | null>(null);
 
   if (!results || results.length === 0) return null;
 
@@ -118,9 +119,10 @@ export function VideoExportView({ results, mode = 'investment' }: { results: Inv
   const pProps = getPlayerProps();
 
   const handleRender = async () => {
-    const toastId = toast.loading("Synthesizing rendering layers... This might take a minute.");
+    const toastId = toast.loading("Initiating render on AWS Lambda...");
     try {
       setIsRendering(true);
+      setRenderProgress(0);
 
       let payload;
       if (videoStyle === 'race') {
@@ -201,22 +203,64 @@ export function VideoExportView({ results, mode = 'investment' }: { results: Inv
         return;
       }
 
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      const contentType = res.headers.get('content-type');
+      let downloadUrl = '';
+
+      if (contentType && contentType.includes('application/json')) {
+        const data = await res.json();
+        if (data.success && data.mode === 'aws') {
+          const { renderId, bucketName } = data;
+          let done = false;
+
+          while (!done) {
+            await new Promise(r => setTimeout(r, 2000));
+            const statusRes = await fetch(`/api/render-video?renderId=${renderId}&bucketName=${bucketName}`);
+            if (!statusRes.ok) {
+              throw new Error('Failed to check render status.');
+            }
+            const statusData = await statusRes.json();
+            if (statusData.fatal) {
+              throw new Error(statusData.error || 'AWS Lambda render failed.');
+            }
+
+            const pct = Math.round((statusData.progress || 0) * 100);
+            setRenderProgress(pct);
+            toast.loading(`Rendering video: ${pct}% complete...`, { id: toastId });
+
+            if (statusData.done) {
+              done = true;
+              downloadUrl = statusData.outputUrl;
+            }
+          }
+        }
+      }
+
+      if (!downloadUrl) {
+        // Fallback for local synchronous rendering
+        const blob = await res.blob();
+        downloadUrl = window.URL.createObjectURL(blob);
+      } else {
+        // Download the final URL from S3
+        const videoRes = await fetch(downloadUrl);
+        const blob = await videoRes.blob();
+        downloadUrl = window.URL.createObjectURL(blob);
+      }
+
       const a = document.createElement('a');
-      a.href = url;
+      a.href = downloadUrl;
       a.download = `investment-${videoStyle}-${layout}.mp4`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(downloadUrl);
       document.body.removeChild(a);
       
       toast.success("Your video is ready and has been downloaded!", { id: toastId });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to render video. Please try again.", { id: toastId });
+      toast.error(error.message || "Failed to render video. Please try again.", { id: toastId });
     } finally {
       setIsRendering(false);
+      setRenderProgress(null);
     }
   };
 
@@ -319,7 +363,7 @@ export function VideoExportView({ results, mode = 'investment' }: { results: Inv
           {isRendering ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Rendering...
+              {renderProgress !== null ? `Rendering ${renderProgress}%` : "Rendering..."}
             </>
           ) : (
             <>
@@ -339,6 +383,33 @@ export function VideoExportView({ results, mode = 'investment' }: { results: Inv
           className="rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-4 border-white/10 bg-[#020617] w-full mx-auto relative"
           style={{ maxWidth: pProps.styleWidth }}
         >
+          {isRendering && (
+            <div className="absolute inset-0 z-50 bg-[#0B1220]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+              <div className="relative mb-6">
+                <div className="w-16 h-16 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-indigo-400" />
+                </div>
+              </div>
+              <h4 className="text-white font-bold text-lg mb-2">Generating MP4 Video</h4>
+              <p className="text-slate-400 text-xs mb-6 max-w-xs leading-normal">
+                Synthesizing timeline points and compiling frames on AWS Lambda...
+              </p>
+              
+              {/* Progress Bar (Loading Filler) */}
+              <div className="w-full max-w-[220px] h-3 bg-white/5 border border-white/10 rounded-full overflow-hidden relative shadow-inner">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full shadow-[0_0_12px_rgba(99,102,241,0.6)] animate-pulse"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${renderProgress || 0}%` }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                />
+              </div>
+              <span className="text-base font-black text-indigo-400 mt-3 font-mono leading-none tracking-wider">
+                {renderProgress !== null ? `${renderProgress}%` : "0%"}
+              </span>
+            </div>
+          )}
           {videoStyle === 'race' ? (
             <Player
               component={StudioVideoComposition}

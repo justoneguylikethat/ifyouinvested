@@ -46,7 +46,11 @@ export interface StudioState {
   setMusic: (music: string) => void;
   updateVoiceover: (voiceover: Partial<VoiceoverConfig>) => void;
   setAnimationStyle: (style: AnimationStyle) => void;
-  setTitle: (title: string) => void;
+  // Rendering states (for export progress overlay)
+  isRendering: boolean;
+  renderProgress: number | null;
+  setIsRendering: (isRendering: boolean) => void;
+  setRenderProgress: (progress: number | null) => void;
 }
 
 export const BUILTIN_DATASETS: Record<TemplateId, Array<{ id: string; label: string; data: any }>> = {
@@ -176,6 +180,8 @@ export const useStudioStore = create<StudioState>((set) => ({
   },
   animationStyle: 'standard',
   title: 'WHICH INVESTMENT MADE YOU RICHER?',
+  isRendering: false,
+  renderProgress: null,
 
   // Setters
   setTemplateId: (templateId) => set((state) => {
@@ -196,5 +202,7 @@ export const useStudioStore = create<StudioState>((set) => ({
   setMusic: (music) => set({ music }),
   updateVoiceover: (voiceover) => set((state) => ({ voiceover: { ...state.voiceover, ...voiceover } })),
   setAnimationStyle: (animationStyle) => set({ animationStyle }),
-  setTitle: (title) => set({ title })
+  setTitle: (title) => set({ title }),
+  setIsRendering: (isRendering) => set({ isRendering }),
+  setRenderProgress: (renderProgress) => set({ renderProgress })
 }));

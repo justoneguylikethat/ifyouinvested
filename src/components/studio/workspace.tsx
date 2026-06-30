@@ -4,8 +4,9 @@ import { useStudioStore, VideoLayout } from "@/lib/use-studio-store";
 import { Player, PlayerRef } from "@remotion/player";
 import { StudioVideoComposition } from "@/remotion/StudioComposition";
 import { useEffect, useRef, useState } from "react";
-import { Play, Pause, RefreshCw, ZoomIn, ZoomOut } from "lucide-react";
+import { Play, Pause, RefreshCw, ZoomIn, ZoomOut, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
 export function Workspace() {
   const state = useStudioStore();
@@ -110,6 +111,33 @@ export function Workspace() {
             aspectRatio: `${res.w}/${res.h}`
           }}
         >
+          {state.isRendering && (
+            <div className="absolute inset-0 z-50 bg-[#0B1220]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+              <div className="relative mb-6">
+                <div className="w-16 h-16 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-indigo-400" />
+                </div>
+              </div>
+              <h4 className="text-white font-bold text-lg mb-2">Generating MP4 Video</h4>
+              <p className="text-slate-400 text-xs mb-6 max-w-xs leading-normal">
+                Synthesizing timeline points and compiling frames on AWS Lambda...
+              </p>
+              
+              {/* Progress Bar (Loading Filler) */}
+              <div className="w-full max-w-[220px] h-3 bg-white/5 border border-white/10 rounded-full overflow-hidden relative shadow-inner">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full shadow-[0_0_12px_rgba(99,102,241,0.6)] animate-pulse"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${state.renderProgress || 0}%` }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                />
+              </div>
+              <span className="text-base font-black text-indigo-400 mt-3 font-mono leading-none tracking-wider">
+                {state.renderProgress !== null ? `${state.renderProgress}%` : "0%"}
+              </span>
+            </div>
+          )}
           <Player
             ref={playerRef}
             component={StudioVideoComposition}

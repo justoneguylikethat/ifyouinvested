@@ -107,8 +107,8 @@ export function GrowthChart({ results }: GrowthChartProps) {
             data={chartData}
             margin={{
               top: 10,
-              right: 0,
-              left: 0,
+              right: 15,
+              left: -25,
               bottom: 0,
             }}
           >
@@ -134,8 +134,8 @@ export function GrowthChart({ results }: GrowthChartProps) {
               tick={{ fontSize: 11, fill: '#64748B' }}
               axisLine={false}
               tickLine={false}
-              width={60}
-              dx={-10}
+              width={45}
+              dx={-5}
             />
             <Tooltip 
               contentStyle={{ 

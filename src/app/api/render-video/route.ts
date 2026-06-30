@@ -105,43 +105,12 @@ export async function POST(req: Request) {
         maxRetries: 1,
       });
 
-      // 2. Poll for progress until complete
-      let progress = await getRenderProgress({
-        region,
-        bucketName,
+      // 2. Return render details immediately. Polling is handled via GET request.
+      return {
+        mode: 'aws',
         renderId,
-        functionName,
-      });
-
-      while (!progress.done && !progress.fatalErrorEncountered) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        progress = await getRenderProgress({
-          region,
-          bucketName,
-          renderId,
-          functionName,
-        });
-      }
-
-      if (progress.fatalErrorEncountered) {
-        throw new Error(`Lambda render failed: ${progress.errors[0]?.message || 'Unknown error'}`);
-      }
-
-      // Remotion returns outputFile (S3 URL of the rendered video)
-      const outputUrl = progress.outputFile || (progress as any).outputUrl;
-      if (!outputUrl) {
-        throw new Error('Lambda render complete but no output URL returned.');
-      }
-
-      console.log(`[render] AWS Lambda render complete! Output: ${outputUrl}`);
-
-      // 3. Fetch finished video and return buffer
-      const videoRes = await fetch(outputUrl);
-      if (!videoRes.ok) {
-        throw new Error(`Failed to fetch rendered video from S3: ${videoRes.statusText}`);
-      }
-      const arrayBuffer = await videoRes.arrayBuffer();
-      return Buffer.from(arrayBuffer);
+        bucketName
+      };
     }
 
     // -- LOCAL RUNTIME RENDER FALLBACK --
@@ -189,7 +158,17 @@ export async function POST(req: Request) {
     );
   }
 
-  return new NextResponse(result.value, {
+  const value = result.value;
+  if (value && typeof value === 'object' && 'mode' in value && value.mode === 'aws') {
+    return NextResponse.json({
+      success: true,
+      mode: 'aws',
+      renderId: value.renderId,
+      bucketName: value.bucketName,
+    });
+  }
+
+  return new NextResponse(value as any, {
     headers: {
       'Content-Type': 'video/mp4',
       'Content-Disposition': 'attachment; filename="simulation.mp4"',
@@ -197,7 +176,55 @@ export async function POST(req: Request) {
   });
 }
 
-export async function GET() {
-  return NextResponse.json({ status: 'ok', message: 'Render server is warm' });
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const renderId = searchParams.get('renderId');
+  const bucketName = searchParams.get('bucketName');
+
+  if (!renderId || !bucketName) {
+    return NextResponse.json({ status: 'ok', message: 'Render server is warm' });
+  }
+
+  // Trim environment variables to prevent TypeError [ERR_INVALID_CHAR] in authorization header
+  if (process.env.REMOTION_AWS_ACCESS_KEY_ID) {
+    process.env.REMOTION_AWS_ACCESS_KEY_ID = process.env.REMOTION_AWS_ACCESS_KEY_ID.trim();
+  }
+  if (process.env.REMOTION_AWS_SECRET_ACCESS_KEY) {
+    process.env.REMOTION_AWS_SECRET_ACCESS_KEY = process.env.REMOTION_AWS_SECRET_ACCESS_KEY.trim();
+  }
+  if (process.env.AWS_ACCESS_KEY_ID) {
+    process.env.AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID.trim();
+  }
+  if (process.env.AWS_SECRET_ACCESS_KEY) {
+    process.env.AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY.trim();
+  }
+
+  try {
+    const region = (process.env.REMOTION_AWS_REGION || 'us-east-1') as any;
+    const functionName = speculateFunctionName({
+      remotionVersion: '4.0.484',
+      memorySizeInMb: 2048,
+      diskSizeInMb: 2048,
+      timeoutInSeconds: 120,
+    });
+
+    const progress = await getRenderProgress({
+      region,
+      bucketName,
+      renderId,
+      functionName,
+    });
+
+    return NextResponse.json({
+      progress: progress.overallProgress || 0,
+      done: progress.done,
+      fatal: progress.fatalErrorEncountered,
+      error: progress.errors?.[0]?.message || null,
+      outputUrl: progress.outputFile || (progress as any).outputUrl || null,
+    });
+  } catch (error: any) {
+    console.error('[render-status] Error fetching progress:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
 

@@ -9,6 +9,8 @@ const POPULAR_AMOUNTS = [100, 1000, 10000];
 // We calculate years relative to current year for SEO longevity, but since URL uses static years, we'll use a mix of fixed years
 const POPULAR_YEARS = [2010, 2015, 2020, 2023];
 
+export const dynamic = 'force-static';
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const sitemap: MetadataRoute.Sitemap = [
     {

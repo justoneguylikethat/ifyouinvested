@@ -2,7 +2,7 @@
 
 import { useStudioStore, VideoLayout, VideoTheme, AnimationStyle } from "@/lib/use-studio-store";
 import { useState } from "react";
-import { Monitor, Smartphone, Square, Moon, Sun, Music, Mic, Zap, Download, Loader2 } from "lucide-react";
+import { Monitor, Smartphone, Square, Moon, Sun, Music, Mic, Zap, Download, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -11,12 +11,12 @@ import { Slider } from "@/components/ui/slider";
 
 export function SettingsPanel() {
   const state = useStudioStore();
-  const [isRendering, setIsRendering] = useState(false);
 
   const handleRender = async () => {
-    const toastId = toast.loading("Synthesizing data & compiling video frames...");
+    const toastId = toast.loading("Initiating render on AWS Lambda...");
     try {
-      setIsRendering(true);
+      state.setIsRendering(true);
+      state.setRenderProgress(0);
       const res = await fetch('/api/render-video', {
         method: 'POST',
         headers: {
@@ -52,21 +52,63 @@ export function SettingsPanel() {
         return;
       }
 
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      const contentType = res.headers.get('content-type');
+      let downloadUrl = '';
+
+      if (contentType && contentType.includes('application/json')) {
+        const data = await res.json();
+        if (data.success && data.mode === 'aws') {
+          const { renderId, bucketName } = data;
+          let done = false;
+
+          while (!done) {
+            await new Promise(r => setTimeout(r, 2000));
+            const statusRes = await fetch(`/api/render-video?renderId=${renderId}&bucketName=${bucketName}`);
+            if (!statusRes.ok) {
+              throw new Error('Failed to check render status.');
+            }
+            const statusData = await statusRes.json();
+            if (statusData.fatal) {
+              throw new Error(statusData.error || 'AWS Lambda render failed.');
+            }
+
+            const pct = Math.round((statusData.progress || 0) * 100);
+            state.setRenderProgress(pct);
+            toast.loading(`Rendering video: ${pct}% complete...`, { id: toastId });
+
+            if (statusData.done) {
+              done = true;
+              downloadUrl = statusData.outputUrl;
+            }
+          }
+        }
+      }
+
+      if (!downloadUrl) {
+        // Fallback for local synchronous rendering
+        const blob = await res.blob();
+        downloadUrl = window.URL.createObjectURL(blob);
+      } else {
+        // Download the final URL from S3
+        const videoRes = await fetch(downloadUrl);
+        const blob = await videoRes.blob();
+        downloadUrl = window.URL.createObjectURL(blob);
+      }
+
       const a = document.createElement('a');
-      a.href = url;
+      a.href = downloadUrl;
       a.download = `${state.templateId}-render-${state.layout}.mp4`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(downloadUrl);
       document.body.removeChild(a);
       toast.success("Studio render complete! Downloaded.", { id: toastId });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Video rendering failed. Please try again.", { id: toastId });
+      toast.error(error.message || "Video rendering failed. Please try again.", { id: toastId });
     } finally {
-      setIsRendering(false);
+      state.setIsRendering(false);
+      state.setRenderProgress(null);
     }
 
   };
@@ -257,13 +299,13 @@ export function SettingsPanel() {
       <div className="p-5 border-t border-white/10 bg-slate-950">
         <Button
           onClick={handleRender}
-          disabled={isRendering}
+          disabled={state.isRendering}
           className="w-full bg-white text-black hover:bg-slate-200 font-bold py-6 rounded-xl flex items-center justify-center gap-2 text-sm shadow-[0_0_30px_rgba(255,255,255,0.1)] transition-all"
         >
-          {isRendering ? (
+          {state.isRendering ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Compiling Video...
+              {state.renderProgress !== null ? `Compiling ${state.renderProgress}%` : "Compiling..."}
             </>
           ) : (
             <>
